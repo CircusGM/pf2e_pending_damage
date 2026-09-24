@@ -1,4 +1,17 @@
-.pf2e-pending-damage { min-width: 440px; }
+.pf2e-pending-damage {
+    min-width: 440px;
+    --pending-half: #3769ff;
+    --pending-full: #ff7900;
+    --pending-double: #f44343;
+    --pending-healing: #249b55;
+    --pending-shield: #f0b400;
+}
+body.pf2e-toolbelt-target-helper-save-colorblind .pf2e-pending-damage {
+    --pending-half: #0072b2;
+    --pending-full: #d55e00;
+    --pending-double: #cc79a7;
+    --pending-healing: #009e73;
+}
 .pf2e-pending-damage .window-content { padding: 8px; overflow: auto; max-height: 70vh; }
 .pf2e-pending-damage .pending-clear { width: auto; padding: 0 8px; font-size: 12px; }
 .pf2e-pending-damage .pending-list { list-style: none; margin: 0; padding: 0; }
@@ -11,6 +24,19 @@
 .pf2e-pending-damage .damage-application img { max-width: 18px; max-height: 18px; }
 .pf2e-pending-damage .dismiss { width: 24px; height: 26px; padding: 0; }
 .pf2e-pending-damage .applying { opacity: .6; }
-.pf2e-pending-damage .pending-recommended { outline: 2px solid var(--color-level-success, #26814b); outline-offset: -1px; }
-.pf2e-pending-damage .shield-activated { outline: 2px solid var(--color-level-info, #4297e1); }
+.pf2e-pending-damage button[data-multiplier="0.5"] { --pending-accent: var(--pending-half); }
+.pf2e-pending-damage button[data-multiplier="1"] { --pending-accent: var(--pending-full); }
+.pf2e-pending-damage button[data-multiplier="2"] { --pending-accent: var(--pending-double); }
+.pf2e-pending-damage button[data-multiplier="-1"] { --pending-accent: var(--pending-healing); }
+.pf2e-pending-damage button.shield-activated { --pending-accent: var(--pending-shield); }
+.pf2e-pending-damage .damage-application.success button[data-multiplier="0.5"],
+.pf2e-pending-damage .damage-application.failure button[data-multiplier="1"],
+.pf2e-pending-damage .damage-application.criticalFailure button[data-multiplier="2"],
+.pf2e-pending-damage .damage-application button[data-multiplier="-1"],
+.pf2e-pending-damage .damage-application button:is(.pending-recommended, .pf2e-toolbelt-target-recommended-damage, .shield-activated) {
+    font-weight: 700;
+    outline: 1px solid var(--pending-accent);
+    outline-offset: -1px;
+    box-shadow: inset 0 0 8px var(--pending-accent);
+}
 .pf2e-pending-damage .empty { margin: 6px; opacity: .75; }
