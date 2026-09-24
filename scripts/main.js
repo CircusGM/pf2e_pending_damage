@@ -7,7 +7,7 @@ export function compatibilityError() {
     if (![14, 15].includes(Number(game.release.generation)) || game.system.id !== "pf2e") return "unsupported";
     const toolbelt = game.modules.get(TOOLBELT_ID);
     if (!toolbelt?.active || foundry.utils.isNewerVersion("3.56.3", toolbelt.version) ||
-        Number(toolbelt.version.split(".")[0]) !== 3) return "toolbeltRequired";
+        ![3, 4].includes(Number(toolbelt.version.split(".")[0]))) return "toolbeltRequired";
     if (!game.modules.get("lib-wrapper")?.active || typeof globalThis.libWrapper?.register !== "function") return "wrapperRequired";
     // Two pending-damage handlers cannot safely coordinate the same clicks.
     if (game.settings.settings.has(`${TOOLBELT_ID}.targetHelper.pendingDamage`)) return "handlerConflict";

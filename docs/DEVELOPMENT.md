@@ -41,6 +41,17 @@ The manifest's `socket: true` enables the `module.pf2e-pending-damage` channel
 on Foundry's existing connection. The requesting client sends claims to the
 active GM and performs the PF2e operation once authorized.
 
+Requests are addressed only to the active GM, and replies only to the requester.
+A normal player application uses three request/reply exchanges: claim, start
+and completion. Foundry separately synchronizes the three message-flag updates.
+Repeated requests share one queued operation while it is in flight. Disconnected
+clients do not emit buffered retries. The active GM's local requests use the same
+15-second timeout as remote requests.
+
+Operations are serialized per message, so a slow write does not block unrelated
+messages. A timeout does not cancel an in-flight document write or unlock an
+application that may have changed HP.
+
 Requests repeat every second for up to 15 seconds using the same request ID.
 An unstarted reservation can be reclaimed after a second; a start check rejects
 superseded claims. Started claims do not expire automatically, and HP operations
@@ -53,8 +64,31 @@ that the application would consume. Separate rolls remain separate operations.
 Module completion records preserve duplicate protection if Toolbelt rewrites
 its own target flags.
 
+Coordination assumes one browser session for the active GM account. Two sessions
+using that account can both process claims; their local queues do not provide a
+shared lock. Separate damage messages also have separate locks, even when they
+target the same actor.
+
 After an interrupted application, inspect the target's HP and the message's
 `flags.pf2e-pending-damage.damageApplications` before manual recovery.
+
+## Rendering and session state
+
+Actor and token updates refresh only messages involving that document. Completed,
+dismissed and unowned targets are filtered before background HTML rendering.
+Applied-roll records and target data are resolved once per collection pass.
+Concurrent updates share one render in flight per message and discard stale
+results before updating the window.
+
+A refresh stops after eight continuously invalidated render passes. This prevents
+a renderer that changes its message on every pass from looping indefinitely.
+The error is logged, stale rows are removed, and a later update can refresh the
+message again. Normal rendering and window updates do not send module socket
+messages or update shared documents.
+
+Session eligibility and dismissal IDs remain until their message is deleted or
+the session resets, allowing target and ownership changes to be reflected.
+Document updates still scan these IDs; completed rows retain no rendered DOM.
 
 ## Checks and packaging
 

@@ -57,13 +57,17 @@ export function applicationFootprint(message, token, rollIndex) {
         .flatMap(([id, rolls]) => Object.keys(rolls).map(index => `${token.parent?.id ?? "scene"}.${id}.${index}`));
 }
 
-export function isDamageApplied(message, token, index) {
-    if (getMessageData(message)?.applied[token.id]?.[index]) return true;
+export function appliedFootprints(message) {
+    return new Set(Object.values(message.getFlag(MODULE_ID, "damageApplications") ?? {})
+        .filter(claim => claim.state === "applied").flatMap(claim => claim.footprint ?? []));
+}
+
+export function isDamageApplied(message, token, index, data = getMessageData(message), completed = appliedFootprints(message)) {
+    if (data?.applied[token.id]?.[index]) return true;
     const key = `${token.parent?.id ?? "scene"}.${token.id}.${index}`;
     // Toolbelt may rewrite its own flag while saves/targets are being updated.
     // Our separately scoped completion records remain authoritative for the panel.
-    return Object.values(message.getFlag(MODULE_ID, "damageApplications") ?? {})
-        .some(claim => claim.state === "applied" && claim.footprint?.includes(key));
+    return completed.has(key);
 }
 
 export function targetRows(html) {

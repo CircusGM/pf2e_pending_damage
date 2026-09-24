@@ -4,16 +4,16 @@
   "description": "A shared pending damage window and duplicate application protection for PF2e Toolbelt's Target Helper.",
   "version": "#{VERSION}#",
   "authors": [{ "name": "CircusGM", "discord": "Malvargr" }],
-  "compatibility": { "minimum": "14.361", "verified": "14", "maximum": "15" },
+  "compatibility": { "minimum": "14.361", "verified": "14.361", "maximum": "15" },
   "esmodules": ["scripts/main.js"],
   "styles": ["styles/pending-damage.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "socket": true,
   "relationships": {
-    "systems": [{ "id": "pf2e", "type": "system", "compatibility": { "minimum": "8.4.0", "maximum": "8" }, "manifest": "https://github.com/foundryvtt/pf2e/releases/download/latest/system.json" }],
+    "systems": [{ "id": "pf2e", "type": "system", "compatibility": { "minimum": "8.4.0", "verified": "8.4.0", "maximum": "9" }, "manifest": "https://github.com/foundryvtt/pf2e/releases/download/latest/system.json" }],
     "requires": [
-      { "id": "pf2e-toolbelt", "type": "module", "compatibility": { "minimum": "3.56.3", "maximum": "3" }, "manifest": "https://raw.githubusercontent.com/reonZ/pf2e-toolbelt/master/module.json" },
-      { "id": "lib-wrapper", "type": "module", "manifest": "https://github.com/ruipin/fvtt-lib-wrapper/releases/latest/download/module.json", "compatibility": { "minimum": "1.13.5.1" } }
+      { "id": "pf2e-toolbelt", "type": "module", "compatibility": { "minimum": "3.56.3", "verified": "3.56.3", "maximum": "4" }, "manifest": "https://raw.githubusercontent.com/reonZ/pf2e-toolbelt/master/module.json" },
+      { "id": "lib-wrapper", "type": "module", "manifest": "https://github.com/ruipin/fvtt-lib-wrapper/releases/latest/download/module.json", "compatibility": { "minimum": "1.13.5.1", "verified": "1.13.5.1", "maximum": "2" } }
     ]
   },
   "url": "#{URL}#",

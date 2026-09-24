@@ -37,13 +37,18 @@ test("Foundry 15 is allowed by the startup compatibility check", () => {
     assert.equal(compatibilityError(), null);
 });
 
+test("Toolbelt 4 is allowed by the startup compatibility check", () => {
+    game.modules.get("pf2e-toolbelt").version = "4.0.0";
+    assert.equal(compatibilityError(), null);
+});
+
 test("unsupported Foundry versions, missing dependencies and conflicting handlers are rejected", () => {
     game.release.generation = 13; assert.equal(compatibilityError(), "unsupported");
     game.release.generation = 16; assert.equal(compatibilityError(), "unsupported");
     game.release.generation = 14;
     const dependency = game.modules.get("pf2e-toolbelt");
     dependency.version = "3.56.2"; assert.equal(compatibilityError(), "toolbeltRequired");
-    dependency.version = "4.0.0"; assert.equal(compatibilityError(), "toolbeltRequired");
+    dependency.version = "5.0.0"; assert.equal(compatibilityError(), "toolbeltRequired");
     dependency.version = "3.56.3";
     game.modules.get("lib-wrapper").active = false; assert.equal(compatibilityError(), "wrapperRequired");
     game.modules.get("lib-wrapper").active = true;

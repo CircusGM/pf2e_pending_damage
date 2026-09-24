@@ -20,7 +20,7 @@ export function deferred() {
 }
 export function reset() {
     Object.assign(state, { now: 10_000, clients: [], records: new Map(), applied: {}, owners: new Set(["player"]),
-        nextId: 0, activeGM: "gm", timers: new Map(), nextTimer: 0, dropPacket: () => false });
+        nextId: 0, activeGM: "gm", timers: new Map(), nextTimer: 0, packets: [], dropPacket: () => false });
     for (const user of state.users) { user.active = true; user.isGM = user.id === "gm"; }
 }
 export async function advance(ms) {
@@ -78,6 +78,20 @@ export function makeClient(id) {
             }
         },
     };
+    const socket = client.socket = {
+        connected: true,
+        on: (_channel, callback) => { client.listener = callback; },
+        emit: (_channel, packet, options) => {
+            state.packets.push({ sender: id, packet: structuredClone(packet), recipients: options?.recipients });
+            if (state.dropPacket(packet, id)) return;
+            for (const peer of state.clients) {
+                if (options?.recipients ? options.recipients.includes(peer.id) : peer.id !== id) {
+                    queueMicrotask(() => peer.listener?.(structuredClone(packet), id));
+                }
+            }
+        },
+    };
+    client.messages = new Map([[message.id, message]]);
     const context = vm.createContext({
         console: { error: (...args) => client.errors.push(args) },
         Date: class extends Date { static now() { return state.now; } },
@@ -90,14 +104,8 @@ export function makeClient(id) {
         game: {
             user: { ...user, get isActiveGM() { return id === state.activeGM; } },
             users: { get: id => state.users.find(u => u.id === id), get activeGM() { return state.users.find(u => u.id === state.activeGM); } },
-            messages: new Map([[message.id, message]]),
-            socket: {
-                on: (_channel, callback) => { client.listener = callback; },
-                emit: (_channel, packet) => {
-                    if (state.dropPacket(packet, id)) return;
-                    for (const peer of state.clients) if (peer.id !== id) queueMicrotask(() => peer.listener?.(structuredClone(packet), id));
-                },
-            },
+            messages: client.messages,
+            socket,
         },
         fromUuid: async uuid => client.tokens.get(uuid), fromUuidSync: uuid => client.tokens.get(uuid),
         document: { createElement: () => ({ textContent: "", get outerHTML() { return `<p>${this.textContent}</p>`; } }) },

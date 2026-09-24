@@ -6,12 +6,13 @@ application protection to PF2e Toolbelt's Target Helper.
 ## Requirements
 
 - Foundry VTT **14.361–15**. Version 15 support is provisional.
-- Pathfinder Second Edition **8.4.0+**, within version 8.
-- **PF2e Toolbelt 3.56.3+**, within version 3.
-- **libWrapper 1.13.5.1+**.
+- Pathfinder Second Edition **8.4.0+**, through major version 9.
+- **PF2e Toolbelt 3.56.3+**, through major version 4.
+- **libWrapper 1.13.5.1+**, through major version 2.
 - An active GM and this module enabled for every participating client.
 
 Enable Toolbelt's **Target Helper** and **Add Targets to Messages**.
+Support for dependency versions beyond the verification baselines is provisional.
 
 ## Usage
 

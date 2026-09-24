@@ -20,7 +20,7 @@
       "unavailable": "Damage could not be synchronized. Ensure a GM is connected. If an application was interrupted, check HP and the message's Pending Damage flags before retrying."
     },
     "unsupported": "PF2e Pending Damage could not start: the Foundry, PF2e, or Toolbelt integration is unsupported. See the console and module README.",
-    "toolbeltRequired": "PF2e Pending Damage requires active PF2e Toolbelt 3.56.3 or newer within version 3.",
+    "toolbeltRequired": "PF2e Pending Damage requires active PF2e Toolbelt 3.56.3 or newer within versions 3–4.",
     "wrapperRequired": "PF2e Pending Damage requires active libWrapper.",
     "handlerConflict": "PF2e Pending Damage detected another pending damage handler in Toolbelt. Install a supported PF2e Toolbelt release before enabling this module.",
     "enableTargetHelper": "Enable PF2e Toolbelt's Target Helper and Add Targets to Messages to use the pending damage window."

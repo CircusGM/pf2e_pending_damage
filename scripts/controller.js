@@ -1,5 +1,5 @@
 import { MODULE_ID, TOOLBELT_ID, localize, ownsDamageTarget } from "./constants.js";
-import { getMessageData, isTargeted, isDamageApplied, markDamageApplied, pendingRows, recommendedMultiplier, targetHelperEnabled } from "./toolbelt-adapter.js";
+import { getMessageData, isTargeted, isDamageApplied, appliedFootprints, markDamageApplied, pendingRows, recommendedMultiplier, targetHelperEnabled } from "./toolbelt-adapter.js";
 import { DamageApplicationGuard } from "./damage-guard.js";
 import { applyDamage, promptAdjustment } from "./damage.js";
 import { PendingStore } from "./pending-store.js";
@@ -7,6 +7,7 @@ import { PendingDamageWindow } from "./window.js";
 
 const APPLY = new Set(["applyDamage", "apply-damage", "target-applyDamage", "target-apply-damage"]);
 const SHIELD = new Set(["target-shieldBlock", "target-shield-block"]);
+const MAX_REFRESH_PASSES = 8;
 const CONTEXT_MULTIPLIERS = new Map([
     ["PF2E.DamageButton.FullContext", 1], ["PF2E.DamageButton.HalfContext", 0.5],
     ["PF2E.DamageButton.DoubleContext", 2], ["PF2E.DamageButton.TripleContext", 3],
@@ -57,14 +58,10 @@ export class PendingDamageController {
             const message = game.messages.get(html.dataset.messageId);
             if (message) this.bindChat(message, html);
         }
-        for (const hook of ["updateActor", "updateToken", "deleteToken", "canvasReady"]) {
-            Hooks.on(hook, () => {
-                for (const id of this.store.eligible) {
-                    const message = game.messages.get(id);
-                    if (message) this.refresh(message);
-                }
-            });
+        for (const hook of ["updateActor", "updateToken", "deleteToken"]) {
+            Hooks.on(hook, document => this.refreshAffected(document));
         }
+        Hooks.on("canvasReady", () => this.refreshAffected());
         const onSetting = (setting) => {
             if ((!setting.user || setting.user === game.user.id) &&
                 [`${TOOLBELT_ID}.targetHelper.targets`, `${TOOLBELT_ID}.targetHelper.enabled`].includes(setting.key)) {
@@ -79,6 +76,29 @@ export class PendingDamageController {
         this.store.reset();
         void this.pendingDamage.close();
     }
+    refreshAffected(document) {
+        if (!this.panelEnabled) return;
+        for (const id of this.store.eligible) {
+            const message = game.messages.get(id);
+            if (!message) { this.store.deleteMessage(id); continue; }
+            if (document) {
+                const flags = message.getFlag(TOOLBELT_ID, "targetHelper");
+                const targets = [...(flags?.targets ?? []), ...(flags?.splashTargets ?? [])];
+                const affected = message.actor?.uuid === document.uuid || message.token?.uuid === document.uuid ||
+                    targets.some(uuid => uuid === document.uuid ||
+                        fromUuidSync(uuid, { strict: false })?.actor?.uuid === document.uuid);
+                if (!affected) continue;
+            }
+            this.refresh(message);
+        }
+    }
+    hasPendingTargets(message, data) {
+        const completed = appliedFootprints(message);
+        return !!data && [...data.targets, ...data.splashTargets].some(token => ownsDamageTarget(token) &&
+            message.rolls.some((_roll, index) => isTargeted(data, token, index) &&
+                !this.store.dismissed.has(PendingStore.key(message.id, token.uuid, index)) &&
+                !isDamageApplied(message, token, index, data, completed)));
+    }
     refresh(message) {
         if (!this.panelEnabled || !this.store.eligible.has(message.id)) return;
         // Coalesce concurrent updates, and discard a completed render if it became
@@ -89,9 +109,14 @@ export class PendingDamageController {
         const epoch = this.epoch;
         this.refreshes.set(message.id, state);
         state.promise = (async () => {
+            let passes = 0;
             while (state.dirty && epoch === this.epoch && this.store.eligible.has(message.id)) {
+                // A renderer that updates the message on every pass must not
+                // create an endless render/update cycle on each connected client.
+                if (++passes > MAX_REFRESH_PASSES) throw new Error("Chat rendering continuously invalidated the pending damage refresh");
                 state.dirty = false;
-                if (!this.panelEnabled || message.isContentVisible === false || !getMessageData(message)) {
+                if (!this.panelEnabled || message.isContentVisible === false ||
+                    !this.hasPendingTargets(message, getMessageData(message))) {
                     this.store.replace(message.id, []);
                     break;
                 }
@@ -110,12 +135,14 @@ export class PendingDamageController {
     }
     collect(message, html) {
         const data = getMessageData(message);
+        const completed = appliedFootprints(message);
         const entries = [];
         if (message.isContentVisible !== false && data) for (const row of pendingRows(message, html, data)) {
             const token = fromUuidSync(row.dataset.targetUuid, { strict: false });
             const index = Number(row.dataset.targetRollIndex);
             if (!ownsDamageTarget(token) || !Number.isInteger(index) || index < 0 || !message.rolls[index] ||
-                !isTargeted(data, token, index) || row.classList.contains("applied") || isDamageApplied(message, token, index)) continue;
+                !isTargeted(data, token, index) || row.classList.contains("applied") ||
+                isDamageApplied(message, token, index, data, completed)) continue;
             const clone = row.cloneNode(true);
             const recommended = recommendedMultiplier(row, message);
             for (const button of clone.querySelectorAll("button[data-multiplier]")) {

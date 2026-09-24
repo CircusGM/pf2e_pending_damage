@@ -11,7 +11,8 @@ class DamageApplicationGuard {
   constructor(tool) {
     this.tool = tool;
   }
-  #queue = Promise.resolve();
+  #queues = new Map();
+  #incoming = new Set();
   #clicks = /* @__PURE__ */ new Set();
   #requests = /* @__PURE__ */ new Map();
   activate() {
@@ -99,29 +100,33 @@ class DamageApplicationGuard {
     if (!gmId)
       return Promise.reject(new Error("No active GM available"));
     const request = { ...options, __type__: SOCKET_TYPE, kind: "request", id: foundry.utils.randomID(), gmId };
-    if (game.user.id === gmId && game.user.isActiveGM) {
-      return this.#enqueue(request, game.user.id);
-    }
     return new Promise((resolve, reject) => {
-      let retry;
-      const send = () => {
-        game.socket.emit(SOCKET, request);
-        retry = setTimeout(send, REQUEST_RETRY_INTERVAL);
-      };
-      const timeout = setTimeout(() => {
+      let retry, timeout;
+      const settle = (callback, value) => {
+        if (!this.#requests.delete(request.id)) return;
+        clearTimeout(timeout);
         clearTimeout(retry);
-        this.#requests.delete(request.id);
-        reject(new Error("Damage synchronization timed out"));
-      }, REQUEST_TIMEOUT);
+        callback(value);
+      };
+      const send = () => {
+        if (!this.#requests.has(request.id)) return;
+        retry = setTimeout(send, REQUEST_RETRY_INTERVAL);
+        // Socket.IO buffers disconnected emits; retries must not build a backlog.
+        if (game.socket.connected === false) return;
+        try {
+          game.socket.emit(SOCKET, request, { recipients: [gmId] });
+        } catch (error) {
+          settle(reject, error);
+        }
+      };
+      timeout = setTimeout(() => settle(reject, new Error("Damage synchronization timed out")), REQUEST_TIMEOUT);
       this.#requests.set(request.id, {
         gmId,
-        resolve: (reply) => {
-          clearTimeout(timeout);
-          clearTimeout(retry);
-          resolve(reply);
-        }
+        resolve: (reply) => settle(resolve, reply)
       });
-      send();
+      if (game.user.id === gmId && game.user.isActiveGM) {
+        void this.#enqueue(request, game.user.id).then(reply => settle(resolve, reply), error => settle(reject, error));
+      } else send();
     });
   }
   #onSocket = (packet, userId) => {
@@ -131,16 +136,30 @@ class DamageApplicationGuard {
       const pending = this.#requests.get(packet.id);
       if (!pending || packet.userId !== game.user.id || pending.gmId !== userId)
         return;
-      this.#requests.delete(packet.id);
       pending.resolve(packet);
     } else if (packet.kind === "request" && game.user.isActiveGM && packet.gmId === game.user.id) {
-      void this.#enqueue(packet, userId).then((reply) => game.socket.emit(SOCKET, reply));
+      if (typeof packet.id !== "string" || typeof packet.messageId !== "string" || !game.users.get(userId)?.active) return;
+      const key = `${userId}:${packet.id}`;
+      // One queued operation and one reply per in-flight request, including retries.
+      if (this.#incoming.has(key)) return;
+      this.#incoming.add(key);
+      void this.#enqueue(packet, userId)
+        .then(reply => {
+          if (game.socket.connected !== false) game.socket.emit(SOCKET, reply, { recipients: [userId] });
+        })
+        .catch(error => console.error("PF2e Pending Damage | Could not reply to damage request", error))
+        .finally(() => this.#incoming.delete(key));
     }
   };
   #enqueue(request, userId) {
-    const result = this.#queue.then(() => this.#handleRequest(request, userId));
-    this.#queue = result.catch(() => {
+    // Claims only overlap within a message. A slow document write must not hold
+    // up unrelated rolls, but the same message must remain serialized.
+    const queue = this.#queues.get(request.messageId) ?? Promise.resolve();
+    const result = queue.then(() => this.#handleRequest(request, userId));
+    const tail = result.catch(() => {}).finally(() => {
+      if (this.#queues.get(request.messageId) === tail) this.#queues.delete(request.messageId);
     });
+    this.#queues.set(request.messageId, tail);
     return result;
   }
   async #handleRequest(request, userId) {

@@ -260,3 +260,106 @@ test("blind or whispered damage cannot be claimed by a player outside its audien
     gm.message.blind = false; gm.message.whisper = ["gm"];
     assert.equal(await player.pendingApply(async () => assert.fail("private roll")), false);
 });
+
+test("a player application sends three requests and replies only to their recipients", async () => {
+    makeClient("gm"); const player = makeClient("player"), observer = makeClient("other");
+    let observed = 0;
+    const listener = observer.listener;
+    observer.listener = (...args) => { observed++; listener(...args); };
+    assert.equal(await player.pendingApply(async () => {}), true);
+    assert.equal(state.packets.length, 6);
+    for (const { sender, packet, recipients } of state.packets) {
+        assert.deepEqual([...recipients], [packet.kind === "request" ? "gm" : "player"]);
+        assert.equal(sender, packet.kind === "request" ? "player" : "gm");
+    }
+    assert.equal(observed, 0);
+    await advance(30_000);
+    assert.equal(state.packets.length, 6);
+    assert.equal(state.timers.size, 0);
+});
+
+test("retries during a slow GM write share one operation and produce one reply", async () => {
+    const gm = makeClient("gm"), player = makeClient("player"), write = deferred();
+    const setFlag = gm.message.setFlag;
+    let writes = 0, calls = 0;
+    gm.message.setFlag = async (...args) => {
+        if (++writes === 1) await write.promise;
+        return setFlag(...args);
+    };
+    const pending = player.pendingApply(async () => calls++);
+    await flush(); await advance(5000);
+    assert.equal(writes, 1);
+    assert.equal(state.packets.filter(({ packet }) => packet.kind === "request").length, 6);
+    const claimId = state.packets[0].packet.id;
+    write.resolve();
+    assert.equal(await pending, true);
+    await flush();
+    assert.equal(state.packets.filter(({ packet }) => packet.kind === "reply" && packet.id === claimId).length, 1);
+    assert.equal(writes, 2); // Claim and start, regardless of the number of retries.
+    assert.equal(calls, 1);
+    assert.equal(state.timers.size, 0);
+});
+
+test("a stalled message does not block damage on another message", async () => {
+    const gm = makeClient("gm"), write = deferred();
+    const setFlag = gm.message.setFlag;
+    gm.message.setFlag = async (...args) => { await write.promise; return setFlag(...args); };
+    const stalled = gm.pendingApply(async () => {});
+    await flush();
+    const flags = new Map();
+    const otherMessage = { ...gm.message, id: "other-message",
+        getFlag: (_scope, path) => flags.get(path),
+        setFlag: async (_scope, path, value) => flags.set(path, value),
+        update: async updates => {
+            for (const [path, value] of Object.entries(updates)) flags.set(path.replace("flags.pf2e-pending-damage.", ""), value);
+        },
+    };
+    gm.messages.set(otherMessage.id, otherMessage);
+    let calls = 0;
+    assert.equal(await gm.guard.run(otherMessage, gm.token, 0, async () => calls++), true);
+    assert.equal(calls, 1);
+    write.resolve();
+    assert.equal(await stalled, true);
+});
+
+test("the active GM times out a stalled request and never applies from its late reply", async () => {
+    const gm = makeClient("gm"), write = deferred();
+    const setFlag = gm.message.setFlag;
+    gm.message.setFlag = async (...args) => { await write.promise; return setFlag(...args); };
+    let calls = 0;
+    const pending = gm.pendingApply(async () => calls++);
+    await flush(); await advance(15_000);
+    assert.equal(await pending, false);
+    assert.equal(state.timers.size, 0);
+    write.resolve(); await flush();
+    assert.equal(calls, 0);
+    assert.equal(await gm.pendingApply(async () => calls++), true);
+    assert.equal(calls, 1);
+});
+
+test("a disconnected client does not buffer retries and can resume before timeout", async () => {
+    makeClient("gm"); const player = makeClient("player");
+    player.socket.connected = false;
+    const pending = player.pendingApply(async () => {});
+    await flush(); await advance(5000);
+    assert.equal(state.packets.length, 0);
+    player.socket.connected = true;
+    await advance(1000);
+    assert.equal(await pending, true);
+    assert.equal(state.packets.length, 6);
+    assert.equal(state.timers.size, 0);
+});
+
+test("a socket emit failure clears all request timers", async () => {
+    makeClient("gm"); const player = makeClient("player");
+    player.socket.emit = () => { throw Error("socket unavailable"); };
+    assert.equal(await player.pendingApply(async () => assert.fail("no request sent")), false);
+    assert.equal(state.timers.size, 0);
+});
+
+test("a synchronous reply cannot leave a retry timer running", async () => {
+    const player = makeClient("player");
+    player.socket.emit = (_channel, packet) => player.listener({ ...packet, kind: "reply", userId: "player", status: "blocked" }, "gm");
+    assert.equal(await player.pendingApply(async () => assert.fail("blocked")), false);
+    assert.equal(state.timers.size, 0);
+});

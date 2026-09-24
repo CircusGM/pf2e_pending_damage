@@ -55,8 +55,12 @@ class PackageTests(unittest.TestCase):
                     expected.update(str(p.relative_to(self.root)) for p in (self.root / "lang").glob("*.json"))
                     self.assertEqual(set(archive.namelist()), expected)
                     self.assertEqual(dependencies["pf2e-toolbelt"]["compatibility"]["minimum"], "3.56.3")
-                    self.assertEqual(manifest["compatibility"]["verified"], "14")
+                    self.assertEqual(manifest["compatibility"]["verified"], "14.361")
                     self.assertEqual(manifest["compatibility"]["maximum"], "15")
+                    for dependency in manifest["relationships"]["systems"] + list(dependencies.values()):
+                        compatibility = dependency["compatibility"]
+                        self.assertEqual(compatibility["verified"], compatibility["minimum"])
+                        self.assertEqual(int(compatibility["maximum"]), int(compatibility["minimum"].split(".")[0]) + 1)
                     self.assertEqual(archive.read("module.json"), manifest_bytes)
                     for name in archive.namelist():
                         self.assertNotIn(b"PRIVATE_TEST_SENTINEL", archive.read(name))

@@ -190,7 +190,7 @@ test("a newer update supersedes an older async background render", async () => {
     controller.store.mark(msg.id); const pending = controller.refresh(msg);
     msg.flags["pf2e-toolbelt"].targetHelper.targets = [];
     controller.refresh(msg); finish(); await pending;
-    assert.equal(count, 2); assert.equal(controller.store.entries.size, 0);
+    assert.equal(count, 1); assert.equal(controller.store.entries.size, 0);
 });
 
 test("malformed/missing totals stay blank and critical success rows are absent", () => {
@@ -214,4 +214,105 @@ test("splash-only targets receive only the splash roll", () => {
     data.targets = []; data.splashTargets = [target.uuid]; data.splashIndex = 1;
     msg.rolls.push({ total: 3 }); controller.store.mark(msg.id); controller.collect(msg, chat(msg));
     assert.deepEqual([...controller.store.entries.keys()], [PendingStore.key(msg.id, target.uuid, 1)]);
+});
+
+test("completed, dismissed and unowned rows do not render in the background", async () => {
+    let renders = 0;
+    msg.renderHTML = async () => { renders++; return chat(msg); };
+    controller.store.mark(msg.id);
+    await controller.refresh(msg);
+    assert.equal(renders, 1);
+    controller.clear();
+    await controller.refresh(msg);
+    assert.equal(renders, 1);
+    controller.store.dismissed.clear();
+    msg.flags["pf2e-toolbelt"].targetHelper.applied[target.id] = { 0: true };
+    await controller.refresh(msg);
+    assert.equal(renders, 1);
+    msg.flags["pf2e-toolbelt"].targetHelper.applied = {};
+    game.user.isGM = false; target.actor.isOwner = false;
+    await controller.refresh(msg);
+    assert.equal(renders, 1);
+    target.actor.isOwner = true;
+    await controller.refresh(msg);
+    assert.equal(renders, 2);
+    assert.equal(controller.store.entries.size, 1);
+});
+
+test("actor and token updates refresh only affected messages", async () => {
+    controller.start();
+    controller.store.mark(msg.id);
+    const other = token("other"), otherMsg = message([other], "other-message");
+    controller.store.mark(otherMsg.id);
+    const refreshed = [];
+    controller.refresh = message => refreshed.push(message.id);
+    await fire("updateActor", target.actor);
+    assert.deepEqual(refreshed.splice(0), [msg.id]);
+    await fire("updateToken", other);
+    assert.deepEqual(refreshed.splice(0), [otherMsg.id]);
+    await fire("deleteToken", other);
+    assert.deepEqual(refreshed.splice(0), [otherMsg.id]);
+    await fire("updateActor", { uuid: "Actor.unrelated" });
+    assert.deepEqual(refreshed, []);
+    msg.actor = { uuid: "Actor.origin" };
+    await fire("updateActor", msg.actor);
+    assert.deepEqual(refreshed.splice(0), [msg.id]);
+    await fire("canvasReady");
+    assert.deepEqual(refreshed, [msg.id, otherMsg.id]);
+});
+
+test("a burst of relevant updates has at most one background render in flight", async () => {
+    controller.start(); controller.store.mark(msg.id);
+    let resolve, renders = 0, active = 0, maximum = 0;
+    msg.renderHTML = async () => {
+        maximum = Math.max(maximum, ++active);
+        if (++renders === 1) await new Promise(done => { resolve = done; });
+        active--;
+        return chat(msg);
+    };
+    const pending = controller.refresh(msg);
+    for (let i = 0; i < 100; i++) await fire("updateActor", target.actor);
+    assert.equal(renders, 1);
+    resolve(); await pending;
+    assert.equal(renders, 2);
+    assert.equal(maximum, 1);
+    assert.equal(controller.store.entries.size, 1);
+});
+
+test("a renderer that continuously invalidates itself cannot loop indefinitely", async () => {
+    controller.store.mark(msg.id);
+    let renders = 0;
+    const original = console.error, failures = [];
+    console.error = (...args) => failures.push(args);
+    try {
+        msg.renderHTML = async () => {
+            renders++;
+            if (renders < 20) controller.refresh(msg);
+            return chat(msg);
+        };
+        await controller.refresh(msg);
+        assert.equal(renders, 8);
+        assert.equal(failures.length, 1);
+        assert.equal(controller.refreshes.size, 0);
+        assert.equal(controller.store.entries.size, 0);
+        msg.renderHTML = async () => chat(msg);
+        await controller.refresh(msg);
+        assert.equal(controller.store.entries.size, 1);
+    } finally { console.error = original; }
+});
+
+test("a long session of completed rolls does not render its history on an actor update", async () => {
+    controller.start(); controller.store.mark(msg.id);
+    let renders = 0;
+    msg.renderHTML = async () => { renders++; return chat(msg); };
+    for (let i = 0; i < 200; i++) {
+        const completed = message([target], `completed-${i}`);
+        completed.flags["pf2e-toolbelt"].targetHelper.applied[target.id] = { 0: true };
+        completed.renderHTML = async () => { renders++; return chat(completed); };
+        controller.store.mark(completed.id);
+    }
+    await fire("updateActor", target.actor);
+    await Promise.all([...controller.refreshes.values()].map(state => state.promise));
+    assert.equal(renders, 1);
+    assert.equal(controller.store.entries.size, 1);
 });

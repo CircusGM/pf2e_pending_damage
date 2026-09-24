@@ -6,12 +6,17 @@ import path from "node:path";
 const manifest = JSON.parse(readFileSync("module.json", "utf8"));
 assert.equal(manifest.id, "pf2e-pending-damage");
 assert.equal(manifest.compatibility.minimum, "14.361");
-assert.equal(manifest.compatibility.verified, "14");
+assert.equal(manifest.compatibility.verified, "14.361");
 assert.equal(manifest.compatibility.maximum, "15");
 assert.equal(manifest.socket, true);
 assert.ok(manifest.authors.some(author => author.name === "CircusGM"));
 assert.equal(manifest.relationships.requires.find(d => d.id === "pf2e-toolbelt").compatibility.minimum, "3.56.3");
 assert.ok(manifest.relationships.requires.some(d => d.id === "lib-wrapper"));
+for (const dependency of [...manifest.relationships.systems, ...manifest.relationships.requires]) {
+    const { minimum, verified, maximum } = dependency.compatibility;
+    assert.equal(verified, minimum);
+    assert.equal(Number(maximum), Number(minimum.split(".")[0]) + 1);
+}
 for (const [field, token] of Object.entries({ version: "VERSION", url: "URL", manifest: "MANIFEST", download: "DOWNLOAD" })) {
     assert.equal(manifest[field], `#{${token}}#`);
 }
