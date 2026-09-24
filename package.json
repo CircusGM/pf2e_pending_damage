@@ -1,0 +1,17 @@
+{
+  "name": "pf2e-pending-damage",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "check": "node tools/check.mjs",
+    "package": "python3 tools/package.py",
+    "test:package": "python3 -m unittest discover -s tests -p 'test_package.py'"
+  },
+  "author": "CircusGM",
+  "license": "CC-BY-NC-SA-4.0",
+  "devDependencies": {
+    "jsdom": "29.1.1"
+  }
+}

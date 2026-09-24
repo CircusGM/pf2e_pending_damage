@@ -1,0 +1,37 @@
+# Generated releases and dependencies
+/dist/
+*.zip
+node_modules/
+coverage/
+
+# Local publishing, credentials and environment overrides
+/tools/publish_dropbox.py
+.local/
+.codex/
+.env
+.env.*
+!.env.example
+*credentials*.json
+*token*.json
+*.pem
+*.key
+
+# Browser runs, Foundry test installations and scratch output
+.playwright-cli/
+output/
+test-results/
+playwright-report/
+/runtime/
+/user-data/
+*.log
+
+# Python, editors and operating-system files
+__pycache__/
+*.py[cod]
+.venv/
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db

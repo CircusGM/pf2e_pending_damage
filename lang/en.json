@@ -1,0 +1,28 @@
+{
+  "pf2e-pending-damage": {
+    "title": "Pending Damage",
+    "clearAll": "Clear All",
+    "dismiss": "Dismiss from your pending list",
+    "empty": "No pending damage.",
+    "damage": "Damage",
+    "open": "Open Pending Damage",
+    "apply": "Apply",
+    "adjustDamage": "Adjust Damage",
+    "adjustHealing": "Adjust Healing",
+    "adjustment": "Adjustment",
+    "settings": {
+      "enabled": { "name": "Enable Pending Damage", "hint": "Coordinate chat and pending-window damage applications through an active GM. Requires Toolbelt Target Helper. All clients must enable this module." },
+      "showWindow": { "name": "Show Pending Damage Window", "hint": "Collect new damage for tokens you own. Disabling the window keeps duplicate protection active in chat." }
+    },
+    "repeat": {
+      "title": "Apply Damage Again?",
+      "content": "This roll was already applied (or attempted) for {target}. Apply it again?",
+      "unavailable": "Damage could not be synchronized. Ensure a GM is connected. If an application was interrupted, check HP and the message's Pending Damage flags before retrying."
+    },
+    "unsupported": "PF2e Pending Damage could not start: the Foundry, PF2e, or Toolbelt integration is unsupported. See the console and module README.",
+    "toolbeltRequired": "PF2e Pending Damage requires active PF2e Toolbelt 3.56.3 or newer within version 3.",
+    "wrapperRequired": "PF2e Pending Damage requires active libWrapper.",
+    "forkConflict": "PF2e Pending Damage cannot run alongside the old Toolbelt pending-damage development fork. Install the original PF2e Toolbelt release first.",
+    "enableTargetHelper": "Enable PF2e Toolbelt's Target Helper and Add Targets to Messages to use the pending damage window."
+  }
+}

@@ -1,0 +1,16 @@
+.pf2e-pending-damage { min-width: 440px; }
+.pf2e-pending-damage .window-content { padding: 8px; overflow: auto; max-height: 70vh; }
+.pf2e-pending-damage .pending-clear { width: auto; padding: 0 8px; font-size: 12px; }
+.pf2e-pending-damage .pending-list { list-style: none; margin: 0; padding: 0; }
+.pf2e-pending-damage .pending-entry { display: grid; grid-template-columns: minmax(50px, 1fr) minmax(60px, 1.2fr) 32px auto 24px; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--color-border-light-tertiary, #777); }
+.pf2e-pending-damage .source, .pf2e-pending-damage .target-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf2e-pending-damage .source { opacity: .75; }
+.pf2e-pending-damage .total { font-weight: bold; text-align: right; }
+.pf2e-pending-damage .damage-application { display: flex; gap: 3px; margin: 0; }
+.pf2e-pending-damage .damage-application button { min-width: 26px; width: auto; height: 26px; padding: 0 5px; }
+.pf2e-pending-damage .damage-application img { max-width: 18px; max-height: 18px; }
+.pf2e-pending-damage .dismiss { width: 24px; height: 26px; padding: 0; }
+.pf2e-pending-damage .applying { opacity: .6; }
+.pf2e-pending-damage .pending-recommended { outline: 2px solid var(--color-level-success, #26814b); outline-offset: -1px; }
+.pf2e-pending-damage .shield-activated { outline: 2px solid var(--color-level-info, #4297e1); }
+.pf2e-pending-damage .empty { margin: 6px; opacity: .75; }

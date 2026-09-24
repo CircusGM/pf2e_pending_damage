@@ -1,0 +1,24 @@
+{
+  "id": "pf2e-pending-damage",
+  "title": "PF2e Pending Damage",
+  "description": "A shared pending damage window and duplicate application protection for PF2e Toolbelt's Target Helper.",
+  "version": "#{VERSION}#",
+  "authors": [{ "name": "CircusGM", "discord": "Malvargr" }],
+  "compatibility": { "minimum": "14.361", "maximum": "14" },
+  "esmodules": ["scripts/main.js"],
+  "styles": ["styles/pending-damage.css"],
+  "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
+  "socket": true,
+  "relationships": {
+    "systems": [{ "id": "pf2e", "type": "system", "compatibility": { "minimum": "8.4.0", "maximum": "8" }, "manifest": "https://github.com/foundryvtt/pf2e/releases/download/latest/system.json" }],
+    "requires": [
+      { "id": "pf2e-toolbelt", "type": "module", "compatibility": { "minimum": "3.56.3", "maximum": "3" }, "manifest": "https://raw.githubusercontent.com/reonZ/pf2e-toolbelt/master/module.json" },
+      { "id": "lib-wrapper", "type": "module", "manifest": "https://github.com/ruipin/fvtt-lib-wrapper/releases/latest/download/module.json", "compatibility": { "minimum": "1.13.5.1" } }
+    ]
+  },
+  "url": "#{URL}#",
+  "manifest": "#{MANIFEST}#",
+  "download": "#{DOWNLOAD}#",
+  "license": "LICENSE",
+  "readme": "README.md"
+}
