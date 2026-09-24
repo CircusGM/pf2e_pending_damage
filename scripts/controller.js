@@ -52,7 +52,7 @@ export class PendingDamageController {
             this.store.deleteMessage(message.id);
             this.renderSoon();
         });
-        // Existing chat is already rendered by ready; bind it without queueing history.
+        // Bind any existing chat elements without adding history to the pending list.
         for (const html of document.querySelectorAll(".chat-message[data-message-id]")) {
             const message = game.messages.get(html.dataset.messageId);
             if (message) this.bindChat(message, html);

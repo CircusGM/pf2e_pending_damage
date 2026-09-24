@@ -6,7 +6,3 @@ at tag pf2e-8.4.0 (https://github.com/foundryvtt/pf2e/tree/pf2e-8.4.0),
 Copyright the PF2e system contributors, licensed under Apache-2.0.
 The Apache license is included as LICENSE-PF2E. Those adapted portions retain
 their Apache-2.0 license. Original module code is under LICENSE.
-
-The pending window and coordination protocol build on CircusGM's unpublished
-pending-damage work (ec7f475) in the local pf2e-owed-damage repository.
-PF2e Toolbelt is a runtime dependency, distributed separately by its author.

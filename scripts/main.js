@@ -4,13 +4,13 @@ import { PendingDamageController } from "./controller.js";
 let controller;
 
 export function compatibilityError() {
-    if (Number(game.release.generation) !== 14 || game.system.id !== "pf2e") return "unsupported";
+    if (![14, 15].includes(Number(game.release.generation)) || game.system.id !== "pf2e") return "unsupported";
     const toolbelt = game.modules.get(TOOLBELT_ID);
     if (!toolbelt?.active || foundry.utils.isNewerVersion("3.56.3", toolbelt.version) ||
         Number(toolbelt.version.split(".")[0]) !== 3) return "toolbeltRequired";
     if (!game.modules.get("lib-wrapper")?.active || typeof globalThis.libWrapper?.register !== "function") return "wrapperRequired";
-    // The old development fork already has its own damage interceptor and guard.
-    if (game.settings.settings.has(`${TOOLBELT_ID}.targetHelper.pendingDamage`)) return "forkConflict";
+    // Two pending-damage handlers cannot safely coordinate the same clicks.
+    if (game.settings.settings.has(`${TOOLBELT_ID}.targetHelper.pendingDamage`)) return "handlerConflict";
     if (typeof ChatMessage.prototype.renderHTML !== "function" ||
         typeof game.toolbelt?.api?.targetHelper?.getMessageTargets !== "function") return "unsupported";
     return null;

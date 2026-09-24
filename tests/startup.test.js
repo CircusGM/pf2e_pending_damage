@@ -32,9 +32,14 @@ test("current dependency contract starts at setup, before chat builds context me
     assert.equal(typeof game.modules.get("pf2e-pending-damage").api.open, "function");
 });
 
-test("wrong Foundry generation, missing dependencies and the old fork are rejected", () => {
+test("Foundry 15 is allowed by the startup compatibility check", () => {
+    game.release.generation = 15;
+    assert.equal(compatibilityError(), null);
+});
+
+test("unsupported Foundry versions, missing dependencies and conflicting handlers are rejected", () => {
     game.release.generation = 13; assert.equal(compatibilityError(), "unsupported");
-    game.release.generation = 15; assert.equal(compatibilityError(), "unsupported");
+    game.release.generation = 16; assert.equal(compatibilityError(), "unsupported");
     game.release.generation = 14;
     const dependency = game.modules.get("pf2e-toolbelt");
     dependency.version = "3.56.2"; assert.equal(compatibilityError(), "toolbeltRequired");
@@ -43,6 +48,6 @@ test("wrong Foundry generation, missing dependencies and the old fork are reject
     game.modules.get("lib-wrapper").active = false; assert.equal(compatibilityError(), "wrapperRequired");
     game.modules.get("lib-wrapper").active = true;
     game.settings.settings.set("pf2e-toolbelt.targetHelper.pendingDamage", {});
-    assert.equal(compatibilityError(), "forkConflict");
+    assert.equal(compatibilityError(), "handlerConflict");
     assert.equal(wrappers.size, 0);
 });

@@ -31,13 +31,13 @@ licenses, exclusion of private files, and rejection of symlinks.
 
 ## Live Foundry checklist
 
-Full live-world gameplay testing has not been performed for this standalone
-module. The sibling feature's testing does not establish standalone integration
-coverage. Record the exact Foundry, PF2e, Toolbelt and libWrapper versions when
-performing the checks below.
+Live-world gameplay validation is pending. Automated tests and source review
+target Foundry 14; Foundry 15 is provisionally allowed and has not been validated.
+Record the exact Foundry, PF2e, Toolbelt and libWrapper versions when performing
+the checks below.
 
 1. Install a generated package in a disposable PF2e test world on Foundry 14.
-   Use original Toolbelt 3.56.3 or later, enable Target Helper and target rows,
+   Use Toolbelt 3.56.3 or later within version 3, enable Target Helper and target rows,
    and connect a GM and two owning players with the same module version.
 2. Roll new targeted damage. Check audience filtering, hidden owned tokens,
    whispered/blind rolls, recommendations, names, totals and multiple rolls.

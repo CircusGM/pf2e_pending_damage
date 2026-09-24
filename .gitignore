@@ -5,7 +5,6 @@ node_modules/
 coverage/
 
 # Local publishing, credentials and environment overrides
-/tools/publish_dropbox.py
 .local/
 .codex/
 .env

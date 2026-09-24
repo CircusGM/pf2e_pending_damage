@@ -1,19 +1,17 @@
 # PF2e Pending Damage
 
-A standalone Foundry VTT module by CircusGM that adds a pending damage window
-and coordinated damage/healing application to PF2e Toolbelt's Target Helper.
+A Foundry VTT module by CircusGM that adds a pending damage window and duplicate
+application protection to PF2e Toolbelt's Target Helper.
 
 ## Requirements
 
-- Foundry VTT **14** (14.361 or later).
+- Foundry VTT **14.361–15**. Version 15 support is provisional.
 - Pathfinder Second Edition **8.4.0+**, within version 8.
-- The original **PF2e Toolbelt 3.56.3+**, within version 3.
+- **PF2e Toolbelt 3.56.3+**, within version 3.
 - **libWrapper 1.13.5.1+**.
 - An active GM and this module enabled for every participating client.
 
-Enable Toolbelt's **Target Helper** and **Add Targets to Messages**. Do not use
-this module alongside the old Toolbelt development fork with pending damage
-built in. PF2e Toolbelt remains a separate dependency; its source is not bundled.
+Enable Toolbelt's **Target Helper** and **Add Targets to Messages**.
 
 ## Usage
 
@@ -23,8 +21,8 @@ Private roll visibility is respected. Existing chat history is not imported.
 
 Apply damage or healing using the normal PF2e buttons, Toolbelt's target buttons,
 the chat context menu, or the pending window. They share the same duplicate
-protection. The underlying PF2e system handles shields, immunities, weaknesses,
-resistances, HP changes and its normal damage side effects.
+protection. PF2e handles shields, immunities, weaknesses, resistances, HP changes
+and its normal damage side effects.
 
 - **Shift-click** opens the damage/healing adjustment dialog; canceling leaves
   the row pending.
@@ -35,59 +33,33 @@ resistances, HP changes and its normal damage side effects.
 - Turning off **Show Pending Damage Window** keeps duplicate protection in chat.
 
 Applying a roll removes it from every relevant user's window. Rapid repeated
-clicks are blocked with a small shake. After two seconds, only a GM using chat
-can deliberately repeat an application, after confirming. Players and pending
-window clicks never receive that override.
+clicks are blocked with a small shake. After two seconds, a GM using chat can
+repeat an application after confirming. Players and pending window clicks
+cannot override duplicate protection. Undoing damage does not clear that
+protection; use the GM's chat controls to apply it again.
 
-The window reuses Toolbelt's rendered save recommendations. When upstream omits
-an owned hidden token's row, native PF2e controls provide a fallback; those rows
-have no feat-specific recommendation highlighting. All multipliers still work.
+The window displays Toolbelt's save recommendations where available. Owned
+hidden targets use native damage controls when Toolbelt does not render a row;
+these controls support all multipliers but have no feat-specific recommendation
+highlighting. Direct HP edits and unrelated macros are outside this module's
+duplicate protection.
 
-## Installation and releases
+## Installation
 
-For local testing, run `npm run package`, then extract `dist/module.zip` into
+Use the `module.json` asset from a [published release](https://github.com/CircusGM/pf2e_pending_damage/releases)
+as the manifest URL in Foundry's **Install Module** dialog. Enable the module
+and its dependencies in your world, then reload all clients.
+
+For a local build, run `npm run package` and extract `dist/module.zip` into
 `Data/modules/pf2e-pending-damage` in your Foundry user-data directory. The
-manifest must be immediately inside that directory. Reload all clients after
-changing the installed version.
+`module.json` file must be directly inside that folder.
 
-Publishing a GitHub release tagged `v0.1.0` (or `0.1.0`) runs validation and attaches
-`module.json` and `module.zip`. Install/update through that repository's
-`releases/latest/download/module.json` URL. The release workflow derives URLs
-from the actual GitHub repository; the checked-in manifest contains placeholders.
+## Development
 
-```sh
-npm ci
-npm test
-npm run check
-npm run test:package
-npm run package
-```
-
-Runtime code is plain JavaScript and needs no bundler. npm dependencies are only
-for development tests. The packager includes an explicit list of runtime assets,
-documentation and licenses, excluding local files, credentials and dependencies.
-
-## Maintenance and validation
-
-The coordination protocol preserves the original feature's one-second request
-retries, 15-second request timeout and two-second repeat guard. HP application
-itself is never retried automatically. A started but interrupted application
-remains protected; check HP and the message's
-`flags.pf2e-pending-damage.damageApplications` before manual recovery.
-
-Automated tests exercise independent GM/player socket contexts and DOM event
-routing. PF2e context preparation is checked against the **pf2e-8.4.0** source;
-Toolbelt integration targets **3.56.3**. Full live-world gameplay testing remains
-necessary; see [TESTING.md](docs/TESTING.md). No Foundry verified version is
-claimed until that testing is recorded. New Foundry generations or substantial
-Toolbelt/PF2e changes may require updating the integration.
-
-See [the implementation notes](docs/INTEGRATION-ANALYSIS.md) for the narrow
-integration boundaries. Direct HP edits and unrelated macros are outside the
-chat-button workflow.
+See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for the integration architecture,
+packaging and release process, and [TESTING.md](docs/TESTING.md) for validation
+coverage and the gameplay checklist. Live gameplay validation is pending.
 
 ## License
 
-[LICENSE](LICENSE) is copied verbatim from `pf2e_alledge_vision` (CC BY-NC-SA 4.0).
-The small adapter derived directly from PF2e retains its Apache-2.0 license;
-see [NOTICE](NOTICE) and [LICENSE-PF2E](LICENSE-PF2E).
+[CC BY-NC-SA 4.0](LICENSE). Third-party licensing details are in [NOTICE](NOTICE).

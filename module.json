@@ -4,7 +4,7 @@
   "description": "A shared pending damage window and duplicate application protection for PF2e Toolbelt's Target Helper.",
   "version": "#{VERSION}#",
   "authors": [{ "name": "CircusGM", "discord": "Malvargr" }],
-  "compatibility": { "minimum": "14.361", "maximum": "14" },
+  "compatibility": { "minimum": "14.361", "verified": "14", "maximum": "15" },
   "esmodules": ["scripts/main.js"],
   "styles": ["styles/pending-damage.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],

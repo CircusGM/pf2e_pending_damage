@@ -6,7 +6,8 @@ import path from "node:path";
 const manifest = JSON.parse(readFileSync("module.json", "utf8"));
 assert.equal(manifest.id, "pf2e-pending-damage");
 assert.equal(manifest.compatibility.minimum, "14.361");
-assert.equal(manifest.compatibility.maximum, "14");
+assert.equal(manifest.compatibility.verified, "14");
+assert.equal(manifest.compatibility.maximum, "15");
 assert.equal(manifest.socket, true);
 assert.ok(manifest.authors.some(author => author.name === "CircusGM"));
 assert.equal(manifest.relationships.requires.find(d => d.id === "pf2e-toolbelt").compatibility.minimum, "3.56.3");
@@ -24,7 +25,7 @@ for (const folder of ["scripts", "tests", "tests/helpers", "tools"]) {
         if (folder !== "scripts") continue;
         const source = readFileSync(file, "utf8");
         for (const [, specifier] of source.matchAll(/from\s+"([^"]+)"/g)) {
-            assert.ok(specifier.startsWith("./"), `Runtime must not depend on npm or sibling repos: ${file}`);
+            assert.ok(specifier.startsWith("./"), `Runtime imports must resolve within the module: ${file}`);
             assert.ok(existsSync(path.join(folder, specifier)), `Missing runtime import: ${specifier}`);
         }
         for (const [, key] of source.matchAll(/localize\("([^"]+)"/g)) {

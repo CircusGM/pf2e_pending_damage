@@ -22,7 +22,7 @@
     "unsupported": "PF2e Pending Damage could not start: the Foundry, PF2e, or Toolbelt integration is unsupported. See the console and module README.",
     "toolbeltRequired": "PF2e Pending Damage requires active PF2e Toolbelt 3.56.3 or newer within version 3.",
     "wrapperRequired": "PF2e Pending Damage requires active libWrapper.",
-    "forkConflict": "PF2e Pending Damage cannot run alongside the old Toolbelt pending-damage development fork. Install the original PF2e Toolbelt release first.",
+    "handlerConflict": "PF2e Pending Damage detected another pending damage handler in Toolbelt. Install a supported PF2e Toolbelt release before enabling this module.",
     "enableTargetHelper": "Enable PF2e Toolbelt's Target Helper and Add Targets to Messages to use the pending damage window."
   }
 }

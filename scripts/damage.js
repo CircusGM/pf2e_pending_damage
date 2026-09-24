@@ -1,7 +1,4 @@
-// Adapted PF2e chat damage context preparation (Apache-2.0; see NOTICE).
-// Source: foundryvtt/pf2e tag pf2e-8.4.0, chat-message/helpers.ts and rules/helpers.ts.
-// Toolbelt's onDamageBtnClick/applyDamageFromMessage are private bundle functions.
-// Keep this bridge small: PF2e owns IWR, shield dialogs, HP, conditions and undo.
+// PF2e damage context adapter; adapted portions are Apache-2.0 (see NOTICE).
 import { localize, ownsDamageTarget } from "./constants.js";
 
 async function ephemeralEffects(origin, target, item, options) {

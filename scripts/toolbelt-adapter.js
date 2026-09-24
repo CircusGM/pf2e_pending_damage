@@ -1,5 +1,4 @@
-// Toolbelt's persistent flag and rendered row contracts are isolated here.
-// Baseline: reonZ/pf2e-toolbelt 3.56.3 (665d856). Never access its debug/private tools.
+// Integration with PF2e Toolbelt 3.56.3 target flags and rendered controls.
 import { MODULE_ID, TOOLBELT_ID, ownsDamageTarget } from "./constants.js";
 
 export function getMessageData(message) {
@@ -75,7 +74,7 @@ export function pendingRows(message, html, data) {
     const rows = targetRows(html);
     const existing = new Set(rows.map(row => `${row.dataset.targetUuid}:${row.dataset.targetRollIndex}`));
     const native = [...html.querySelectorAll(".damage-application")].filter(row => !row.dataset.targetUuid);
-    // Upstream omits hidden tokens even for their owning players. Reuse PF2e's
+    // Toolbelt omits hidden tokens even for their owning players. Reuse PF2e's
     // native controls for owned targets absent from the Toolbelt-rendered rows.
     for (const token of [...data.targets, ...data.splashTargets].filter(ownsDamageTarget)) {
         for (let index = 0; index < message.rolls.length; index++) {
@@ -90,8 +89,7 @@ export function pendingRows(message, html, data) {
             const showResults = game.user.isGM || game.pf2e.settings.metagame.results ||
                 !message.actor || message.actor.isOwner || message.actor.hasPlayerOwner;
             if (variant?.basic && showResults && save?.success === "criticalSuccess") row.classList.add("applied");
-            // Do not reproduce Toolbelt's feat-specific recommendation logic.
-            // The controls still permit every native damage/healing multiplier.
+            // Native controls have no feat-specific recommendation highlighting.
             rows.push(row);
             existing.add(key);
         }
