@@ -30,12 +30,14 @@ export const errors = [];
 export function reset() {
     document.body.replaceChildren();
     settings.clear(); tokens.clear(); hooks.clear(); wrappers.clear(); errors.length = 0;
-    for (const key of ["pf2e-pending-damage.enabled", "pf2e-pending-damage.showWindow",
+    for (const key of ["pf2e-pending-damage.enabled", "pf2e-pending-damage.showWindow", "pf2e-pending-damage.protection",
         "pf2e-toolbelt.targetHelper.enabled", "pf2e-toolbelt.targetHelper.targets"]) settings.set(key, true);
     globalThis.CONFIG = { PF2E: { chatDamageButtonShieldToggle: false } };
     globalThis.game = {
         user: { id: "gm", isGM: true, isActiveGM: true, getActiveTokens: () => [...tokens.values()] },
-        users: { activeGM: { id: "gm" }, get: () => ({ id: "gm", isGM: true, active: true }) },
+        users: { activeGM: { id: "gm" }, get: () => ({ id: "gm", isGM: true, active: true, role: 4 }),
+            filter: fn => [{ id: "gm", isGM: true, active: true, role: 4 }].filter(fn) },
+        time: { get serverTime() { return Date.now(); } },
         messages: new Map(), pf2e: { settings: { metagame: { results: true } } },
         settings: { get: (scope, key) => settings.get(`${scope}.${key}`) },
         socket: { on() {}, emit() {} },
@@ -43,7 +45,7 @@ export function reset() {
     };
     globalThis.fromUuidSync = uuid => tokens.get(uuid);
     globalThis.fromUuid = async uuid => tokens.get(uuid);
-    globalThis.ui = { notifications: { error: error => errors.push(error), warn: error => errors.push(error) } };
+    globalThis.ui = { notifications: { error: error => errors.push(error), warn: error => errors.push(error), info: error => errors.push(error) } };
     globalThis.Hooks = {
         on: (name, fn) => { if (!hooks.has(name)) hooks.set(name, []); hooks.get(name).push(fn); },
         once: (name, fn) => Hooks.on(name, fn),
@@ -80,6 +82,8 @@ export function message(targets = [...tokens.values()], id = "message") {
         },
         renderHTML: async () => chat(result),
     };
+    // One shared copy: the server's view is this object.
+    result.constructor = { database: { get: async () => [result] } };
     game.messages.set(id, result);
     return result;
 }

@@ -24,6 +24,9 @@ Hooks.once("init", () => {
                 if (scope !== "user" || userId === game.user.id) controller?.reset();
             } });
     }
+    // The final failsafe: without it, chat buttons use PF2e's and Toolbelt's own handlers.
+    game.settings.register(MODULE_ID, "protection", { name: `${MODULE_ID}.settings.protection.name`,
+        hint: `${MODULE_ID}.settings.protection.hint`, scope: "world", config: true, type: Boolean, default: true });
     game.keybindings.register(MODULE_ID, "open", { name: `${MODULE_ID}.open`,
         editable: [{ key: "KeyD", modifiers: ["Control", "Shift"] }],
         onDown: () => {

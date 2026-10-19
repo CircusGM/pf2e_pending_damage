@@ -26,10 +26,17 @@ protection so you or the GM don't both damage the same character.
   applying damage or clearing another user's list.
 - **Ctrl+Shift+D** reopens the window; this keybinding is configurable.
 - Turning off **Show Pending Damage Window** keeps duplicate protection in chat.
+- **Duplicate Protection** is a last resort if applying damage fails: turned off,
+  chat buttons work exactly as in PF2e and Toolbelt, and the window applies damage
+  without protection.
 
 Applying a roll removes it from every relevant user's window. Rapid repeated
 clicks are blocked with a small shake. After two seconds, a GM using chat can
 repeat an application after confirming in case you really did need damage twice or the first one got undone.
+
+With duplicate protection on, a connected GM is required to apply damage. When an application is blocked or
+fails, a notification says why: for example, who already applied it, or that the
+GM's client didn't respond. The GM may be logged in on several browsers or devices.
 
 The window displays Toolbelt's save recommendations where available.
 
@@ -37,7 +44,8 @@ The window displays Toolbelt's save recommendations where available.
 
 Use the `module.json` asset from a [published release](https://github.com/CircusGM/pf2e_pending_damage/releases)
 as the manifest URL in Foundry's **Install Module** dialog. Enable the module
-and its dependencies in your world, then reload all clients.
+and its dependencies in your world, then reload all clients. If the world was
+running when you installed the module, return to Setup and launch it again.
 
 ## License
 

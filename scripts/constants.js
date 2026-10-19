@@ -1,6 +1,9 @@
 export const MODULE_ID = "pf2e-pending-damage";
 export const TOOLBELT_ID = "pf2e-toolbelt";
 export const SOCKET = `module.${MODULE_ID}`;
+// Version 1 clients use "damageGuard.v1" and ignore these packets.
+export const PACKET = "damageGuard";
+export const PROTOCOL = 2;
 export const localize = (key, data) => data
     ? game.i18n.format(`${MODULE_ID}.${key}`, data)
     : game.i18n.localize(`${MODULE_ID}.${key}`);

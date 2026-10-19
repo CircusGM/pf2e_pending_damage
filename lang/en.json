@@ -11,18 +11,50 @@
     "adjustHealing": "Adjust Healing",
     "adjustment": "Adjustment",
     "settings": {
-      "enabled": { "name": "Enable Pending Damage", "hint": "Coordinate chat and pending-window damage applications through an active GM. Requires Toolbelt Target Helper. All clients must enable this module." },
-      "showWindow": { "name": "Show Pending Damage Window", "hint": "Collect new damage for tokens you own. Disabling the window keeps duplicate protection active in chat." }
+      "enabled": {
+        "name": "Enable Pending Damage",
+        "hint": "Coordinate chat and pending-window damage applications through an active GM. Requires Toolbelt Target Helper. All clients must enable this module."
+      },
+      "protection": {
+        "name": "Duplicate Protection",
+        "hint": "Coordinate each damage application through a connected GM so a roll can't be applied to a target twice. Turn this off only if applying damage fails: chat buttons then work exactly as in PF2e and Toolbelt, and the pending window applies damage directly, without protection."
+      },
+      "showWindow": {
+        "name": "Show Pending Damage Window",
+        "hint": "Collect new damage for tokens you own. Disabling the window keeps duplicate protection active in chat."
+      }
     },
     "repeat": {
       "title": "Apply Damage Again?",
-      "content": "This roll was already applied (or attempted) for {target}. Apply it again?",
-      "unavailable": "Damage could not be synchronized. Ensure a GM is connected. If an application was interrupted, check HP and the message's Pending Damage flags before retrying."
+      "content": "This roll was already applied to {target}. Apply it again?",
+      "applied": "{user} already applied this roll to {target}. Apply it again?",
+      "failed": "{user}'s attempt to apply this roll to {target} failed. Check {target}'s HP before applying it again. Apply it now?",
+      "uncertain": "{user}'s attempt to apply this roll to {target} was interrupted, so it may already have changed HP. Check {target}'s HP. Apply it again?"
     },
     "unsupported": "PF2e Pending Damage could not start: the Foundry, PF2e, or Toolbelt integration is unsupported. See the console and module README.",
     "toolbeltRequired": "PF2e Pending Damage requires active PF2e Toolbelt 3.56.3 or newer within versions 3–4.",
     "wrapperRequired": "PF2e Pending Damage requires active libWrapper.",
     "handlerConflict": "PF2e Pending Damage detected another pending damage handler in Toolbelt. Install a supported PF2e Toolbelt release before enabling this module.",
-    "enableTargetHelper": "Enable PF2e Toolbelt's Target Helper and Add Targets to Messages to use the pending damage window."
+    "enableTargetHelper": "Enable PF2e Toolbelt's Target Helper and Add Targets to Messages to use the pending damage window.",
+    "socketUnavailable": "PF2e Pending Damage can't reach other users' clients, so only you can apply damage. If you just installed it, return to Setup and launch the world again.",
+    "sync": {
+      "noGM": "No GM is connected, so damage can't be applied safely. Nothing was changed. Try again once a GM has joined.",
+      "timeout": "The GM's client didn't respond, so nothing was changed. Make sure the GM has PF2e Pending Damage enabled and everyone reloaded after updating it.",
+      "version": "Your PF2e Pending Damage version differs from the GM's. Everyone should reload (F5).",
+      "error": "Damage could not be applied: {error}",
+      "failed": "Couldn't apply damage to {target}: {error}. Check {target}'s HP; a GM can apply it again from the chat card.",
+      "invalid": "Couldn't apply damage to {target}: {error}. Nothing was changed.",
+      "unrecorded": "Damage was applied to {target}, but the GM's client hasn't recorded it yet. It will be recorded when the GM responds.",
+      "changed": "The damage roll or target changed before it could be applied. Nothing was changed.",
+      "busy": "{user} is already applying this roll to {target}.",
+      "applied": "{user} already applied this roll to {target}.",
+      "superseded": "{user} applied this roll to {target} while you were confirming. Nothing was changed.",
+      "interrupted": "An earlier attempt to apply this roll to {target} was interrupted. Ask the GM to check HP and apply it again from the chat card.",
+      "notOwner": "You don't own {target}.",
+      "hidden": "You can't see this damage roll.",
+      "missing": "This damage roll or {target} no longer exists.",
+      "someone": "Someone",
+      "slow": "Your connection to the GM is too slow to apply damage safely right now. Nothing was changed; try again."
+    }
   }
 }

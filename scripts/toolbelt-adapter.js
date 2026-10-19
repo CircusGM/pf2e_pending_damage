@@ -1,5 +1,6 @@
 // Integration with PF2e Toolbelt 3.56.3 target flags and rendered controls.
-import { MODULE_ID, TOOLBELT_ID, ownsDamageTarget } from "./constants.js";
+import { TOOLBELT_ID, ownsDamageTarget } from "./constants.js";
+import { claimsOf } from "./records.js";
 
 export function getMessageData(message) {
     const data = message.getFlag(TOOLBELT_ID, "targetHelper");
@@ -58,8 +59,7 @@ export function applicationFootprint(message, token, rollIndex) {
 }
 
 export function appliedFootprints(message) {
-    return new Set(Object.values(message.getFlag(MODULE_ID, "damageApplications") ?? {})
-        .filter(claim => claim.state === "applied").flatMap(claim => claim.footprint ?? []));
+    return new Set(claimsOf(message).filter(claim => claim.state === "applied").flatMap(claim => claim.footprint ?? []));
 }
 
 export function isDamageApplied(message, token, index, data = getMessageData(message), completed = appliedFootprints(message)) {

@@ -21,7 +21,18 @@ async function ephemeralEffects(origin, target, item, options) {
     });
 }
 
-export async function applyDamage({ message, token, rollIndex, multiplier, addend = 0, shieldBlockRequest = false }) {
+export async function applyDamage(options) {
+    let prepared;
+    try {
+        prepared = await prepareDamage(options);
+    } catch (error) {
+        // Nothing has changed yet, so the claim can be withdrawn instead of recorded as attempted.
+        throw Object.assign(error instanceof Error ? error : new Error(String(error)), { untouched: true });
+    }
+    await prepared.actor.applyDamage(prepared.data);
+}
+
+async function prepareDamage({ message, token, rollIndex, multiplier, addend = 0, shieldBlockRequest = false }) {
     const roll = message.rolls[rollIndex];
     if (!ownsDamageTarget(token) || typeof roll?.alter !== "function" || !Number.isFinite(roll.total) ||
         !Number.isFinite(multiplier) || !Number.isFinite(addend)) throw new Error("Invalid damage application");
@@ -38,21 +49,23 @@ export async function applyDamage({ message, token, rollIndex, multiplier, adden
     const actor = token.actor.getContextualClone(originOptions, effects);
     const rollOptions = new Set([...options.filter(o => !/^(?:self|target)(?::|$)/.test(o)),
         ...effectOptions, ...originOptions, ...actor.getSelfRollOptions()]);
-    await actor.applyDamage({
+    return { actor, data: {
         damage: multiplier < 0 ? multiplier * roll.total + addend : roll.alter(multiplier, addend),
         token, item, skipIWR: multiplier <= 0, rollOptions, shieldBlockRequest, outcome: context?.outcome,
-    });
+    } };
 }
 
+// Resolves to a number, or null if cancelled. DialogV2 substitutes the button's action
+// when a callback returns null, so an empty field counts as 0, as it does in PF2e.
 export async function promptAdjustment(multiplier) {
-    return foundry.applications.api.DialogV2.prompt({
+    const result = await foundry.applications.api.DialogV2.prompt({
         window: { title: localize(multiplier < 0 ? "adjustHealing" : "adjustDamage") },
         content: `<label>${localize("adjustment")} <input name="adjustment" type="number" value="0" autofocus></label>`,
         ok: { label: localize("apply"), callback: (_event, button) => {
-            const input = button.form.elements.adjustment;
-            return input.checkValidity() && Number.isFinite(input.valueAsNumber)
-                ? input.valueAsNumber * Math.sign(multiplier) : null;
+            const value = button.form.elements.adjustment.valueAsNumber;
+            return (Number.isFinite(value) ? Math.trunc(value) : 0) * Math.sign(multiplier);
         } },
         rejectClose: false,
     });
+    return typeof result === "number" && Number.isFinite(result) ? result : null;
 }

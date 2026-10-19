@@ -56,11 +56,43 @@ test("context-menu damage/healing uses the guard; unrelated options remain intac
     await options[0].onClick({}, chat(msg)); assert.equal(original, 1);
 });
 
+test("deprecated context-menu spellings are intercepted; entries without a handler are left alone", async () => {
+    let original = 0, calls = [];
+    const legacy = { name: "PF2E.DamageButton.HalfContext", callback: () => original++ };
+    const broken = { label: "PF2E.DamageButton.FullContext" };
+    controller.apply = async options => calls.push(options);
+    controller.bindContextMenu([legacy, broken]);
+    await legacy.callback({}, chat(msg));
+    assert.equal(original, 0); assert.deepEqual(calls.map(call => call.multiplier), [0.5]);
+    assert.equal(broken.onClick, undefined); assert.equal(broken.callback, undefined);
+});
+
 test("disabling only the panel leaves chat protection active", async () => {
     settings.set("pf2e-pending-damage.showWindow", false);
     let calls = 0; controller.apply = async () => calls++;
     const html = chat(msg); controller.bindChat(msg, html); click(html.querySelector("button")); await flush();
     assert.equal(calls, 1); assert.equal(controller.panelEnabled, false);
+});
+
+test("with duplicate protection off, chat uses the native handlers and the window applies directly", async () => {
+    settings.set("pf2e-pending-damage.protection", false);
+    const html = chat(msg);
+    let original = 0;
+    html.querySelector("[data-target-uuid] button").addEventListener("click", () => original++);
+    controller.bindChat(msg, html);
+    assert.equal(click(html.querySelector("[data-target-uuid] button")), true);
+    assert.equal(original, 1);
+    let menu = 0;
+    const options = [{ label: "PF2E.DamageButton.FullContext", onClick: () => menu++ }];
+    controller.bindContextMenu(options);
+    await options[0].onClick({}, chat(msg));
+    assert.equal(menu, 1);
+    // No GM is needed and nothing is sent.
+    game.users.filter = () => [];
+    let emits = 0; game.socket.emit = () => emits++;
+    let hp = 0; target.actor.applyDamage = async () => hp++;
+    assert.equal(await controller.apply({ message: msg, token: target, rollIndex: 0, multiplier: 1, allowRepeat: false }), true);
+    assert.equal(hp, 1); assert.equal(emits, 0);
 });
 
 test("only newly created messages populate, even when chat is closed", async () => {
@@ -110,6 +142,8 @@ test("applied flags, removed targets, deleted messages and changed ownership pur
 test("an application removes the row from every client's independently maintained panel", async () => {
     const peers = [controller, new PendingDamageController(), new PendingDamageController()];
     for (const peer of peers) { peer.start(); peer.store.mark(msg.id); await peer.refresh(msg); }
+    // A single-session GM coordinates its own clicks once the election settles.
+    controller.guard.coordinator.isCoordinator = () => true;
     let hpCalls = 0; target.actor.applyDamage = async () => hpCalls++;
     assert.equal(await controller.apply({ message: msg, token: target, rollIndex: 0, multiplier: 1, allowRepeat: false }), true);
     for (const peer of peers) { await peer.refresh(msg); assert.equal(peer.store.entries.size, 0); }
@@ -120,7 +154,7 @@ test("rapid clicks and rerender while applying retain a single in-flight operati
     controller.store.mark(msg.id); controller.collect(msg, chat(msg));
     const entry = [...controller.store.entries.values()][0];
     let finish, calls = 0;
-    controller.guard.run = async (_m, _t, _i, apply) => { calls++; await new Promise(resolve => { finish = resolve; }); await apply(); return true; };
+    controller.guard.run = async (_m, _t, _i, { apply }) => { calls++; await new Promise(resolve => { finish = resolve; }); await apply(); return true; };
     const options = { message: msg, token: target, rollIndex: 0, multiplier: 1, entry };
     const first = controller.apply(options);
     controller.collect(msg, chat(msg));
@@ -132,7 +166,7 @@ test("rapid clicks and rerender while applying retain a single in-flight operati
 
 test("Shift cancellation never reserves or applies damage; a confirmed modifier reaches PF2e", async () => {
     let guards = 0, damage;
-    controller.guard.run = async (_m, _t, _i, apply) => { guards++; await apply(); return true; };
+    controller.guard.run = async (_m, _t, _i, { apply }) => { guards++; await apply(); return true; };
     foundry.applications.api.DialogV2.prompt = async () => null;
     const options = { message: msg, token: target, rollIndex: 0, multiplier: -1, shift: true };
     assert.equal(await controller.apply(options), false); assert.equal(guards, 0);
@@ -141,20 +175,36 @@ test("Shift cancellation never reserves or applies damage; a confirmed modifier 
     assert.equal(await controller.apply(options), true); assert.equal(guards, 1); assert.equal(damage, -16);
 });
 
-test("a deleted message or changed roll during the GM wait never reaches PF2e", async () => {
+// The guard withdraws a claim whose verification fails, without calling apply.
+const verifyingGuard = async (_m, _t, _i, { verify, apply }) => {
+    if (verify()) return false;
+    await apply();
+    return true;
+};
+
+test("a deleted message, rerolled total or changed damage type never reaches PF2e", async () => {
     let hp = 0; target.actor.applyDamage = async () => hp++;
-    for (const mutate of [() => game.messages.delete(msg.id), () => { msg.rolls[0] = { total: 90 }; }]) {
+    msg.rolls[0].formula = "2d6[piercing]";
+    const original = msg.rolls[0];
+    for (const mutate of [() => game.messages.delete(msg.id), () => { msg.rolls[0] = { ...original, total: 90 }; },
+        () => { msg.rolls[0] = { ...original, formula: "2d6[fire]" }; }]) {
+        msg.rolls[0] = original;
         game.messages.set(msg.id, msg);
-        controller.guard.run = async (_m, _t, _i, apply) => { mutate(); await assert.rejects(apply, /changed/); return false; };
+        controller.guard.run = async (...args) => { mutate(); assert.match(args[3].verify(), /sync\.changed/); return verifyingGuard(...args); };
         assert.equal(await controller.apply({ message: msg, token: target, rollIndex: 0, multiplier: 1 }), false);
     }
     assert.equal(hp, 0);
 });
 
-test("flag updates may reconstruct an unchanged roll while the GM coordinates the claim", async () => {
+test("Dice So Nice annotations and rolls rebuilt by flag updates do not block an application", async () => {
     let hp = 0; target.actor.applyDamage = async () => hp++;
-    controller.guard.run = async (_m, _t, _i, apply) => {
-        msg.rolls[0] = { ...msg.rolls[0] }; await apply(); return true;
+    msg.rolls[0].formula = "2d6[piercing]";
+    // Dice So Nice annotates the prepared roll before the click.
+    msg.rolls[0].terms = [{ options: { flavor: "piercing", dsnRoleManaged: true }, results: [{ result: 6, indexThrow: 0 }] }];
+    controller.guard.run = async (...args) => {
+        // The claim's flag write rebuilds the roll from stored data, without those notes.
+        msg.rolls[0] = { ...msg.rolls[0], options: { showBreakdown: true }, terms: [{ options: { flavor: "piercing" }, results: [{ result: 6 }] }] };
+        return verifyingGuard(...args);
     };
     assert.equal(await controller.apply({ message: msg, token: target, rollIndex: 0, multiplier: 1 }), true);
     assert.equal(hp, 1);

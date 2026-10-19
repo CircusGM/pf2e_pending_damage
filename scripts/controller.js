@@ -14,8 +14,10 @@ const CONTEXT_MULTIPLIERS = new Map([
     ["PF2E.DamageButton.HealingContext", -1],
 ]);
 
+// Only what determines the damage: Dice So Nice and other modules annotate Roll
+// objects in memory, and every message update rebuilds them without those notes.
 function rollSignature(roll) {
-    return roll ? JSON.stringify(roll.toJSON?.() ?? { total: roll.total, formula: roll.formula }) : null;
+    return roll ? JSON.stringify([roll.formula, roll.total]) : null;
 }
 
 export class PendingDamageController {
@@ -30,6 +32,7 @@ export class PendingDamageController {
     busy = new Set();
     epoch = 0;
     get enabled() { return game.settings.get(MODULE_ID, "enabled") && targetHelperEnabled(); }
+    get protected() { return game.settings.get(MODULE_ID, "protection") !== false; }
     get panelEnabled() {
         return this.enabled && game.settings.get(MODULE_ID, "showWindow") &&
             game.settings.get(TOOLBELT_ID, "targetHelper.targets");
@@ -165,7 +168,7 @@ export class PendingDamageController {
         // Toolbelt and PF2e, including controls appended after this wrapper returns.
         html.addEventListener("click", event => {
             const button = event.target?.closest?.(".damage-application button[data-action]");
-            if (!button || !this.enabled || !APPLY.has(button.dataset.action)) return;
+            if (!button || !this.enabled || !this.protected || !APPLY.has(button.dataset.action)) return;
             event.preventDefault();
             event.stopImmediatePropagation();
             if (event.button !== 0 || button.disabled || message.isContentVisible === false) return;
@@ -181,11 +184,13 @@ export class PendingDamageController {
     }
     bindContextMenu(options) {
         for (const option of options) {
-            const multiplier = CONTEXT_MULTIPLIERS.get(option.label);
-            if (multiplier === undefined) continue;
-            const original = option.onClick;
-            option.onClick = (event, element) => {
-                if (!this.enabled) return original.call(option, event, element);
+            // v14 uses label/onClick; name/callback are its deprecated spellings.
+            const multiplier = CONTEXT_MULTIPLIERS.get(option.label ?? option.name);
+            const handler = typeof option.onClick === "function" ? "onClick" : "callback";
+            const original = option[handler];
+            if (multiplier === undefined || typeof original !== "function") continue;
+            option[handler] = (event, element) => {
+                if (!this.enabled || !this.protected) return original.call(option, event, element);
                 const message = game.messages.get(element.dataset.messageId);
                 if (!message || message.isContentVisible === false) return;
                 const tokens = element.dataset.actorIsTarget && message.token ? [message.token] : game.user.getActiveTokens();
@@ -234,18 +239,17 @@ export class PendingDamageController {
         this.renderSoon();
         try {
             const addend = shift ? await promptAdjustment(multiplier) : 0;
-            if (addend === null || addend === undefined) return false;
+            if (!Number.isFinite(addend)) return false;
             // Recheck after a dialog: targets/ownership/rolls can change while open.
             if (!this.enabled || !game.messages.has(message.id) || !ownsDamageTarget(token) ||
                 (entry && (!this.store.entries.has(key) || !isTargeted(getMessageData(message), token, rollIndex)))) return false;
-            const applied = await this.guard.run(message, token, rollIndex, async () => {
-                if (!this.enabled || !game.messages.has(message.id) || message.isContentVisible === false ||
+            const applied = await this.guard.run(message, token, rollIndex, {
+                allowRepeat,
+                verify: () => !this.enabled || !game.messages.has(message.id) || message.isContentVisible === false ||
                     rollSignature(message.rolls[rollIndex]) !== signature || !ownsDamageTarget(token) ||
-                    (entry && !isTargeted(getMessageData(message), token, rollIndex))) {
-                    throw new Error("Damage source or target changed before application");
-                }
-                await applyDamage({ message, token, rollIndex, multiplier, addend, shieldBlockRequest: shield });
-            }, allowRepeat);
+                    (entry && !isTargeted(getMessageData(message), token, rollIndex)) ? localize("sync.changed") : null,
+                apply: () => applyDamage({ message, token, rollIndex, multiplier, addend, shieldBlockRequest: shield }),
+            });
             if (applied && entry) this.dismiss(key);
             return applied;
         } finally {
@@ -262,11 +266,12 @@ export class PendingDamageController {
     clear() { this.store.clear(); this.renderSoon(); }
     report(error) {
         console.error("PF2e Pending Damage", error);
-        ui.notifications.error(localize("repeat.unavailable"));
+        ui.notifications.error(localize("sync.error", { error: error.message }));
     }
     renderSoon = foundry.utils.debounce(() => {
         if (!this.panelEnabled) return;
-        if (this.store.entries.size) void this.pendingDamage.render({ force: true });
+        // Forcing an open window would also maximize it and bring it to the front.
+        if (this.store.entries.size) void this.pendingDamage.render({ force: !this.pendingDamage.rendered });
         else if (this.pendingDamage.rendered) void this.pendingDamage.render();
     }, 25);
 }

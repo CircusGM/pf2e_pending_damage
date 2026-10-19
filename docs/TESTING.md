@@ -10,16 +10,22 @@ npm run test:package
 npm run package
 ```
 
-The Node suite runs the actual guard in independent GM/player contexts with a
-simulated authenticated socket and persisted flags. It exercises simultaneous
-clicks and healing, lost requests/replies, reservation expiry, delayed starts,
-stale confirmations, ownership, visibility, GM handoff, failures, main/splash
-conflicts and stale pending-window clicks.
+The Node suite runs the actual guard in independent browser sessions sharing a
+simulated Foundry server: authoritative flags, serialized writes broadcast to
+every session with per-client latency, and a socket relay that reaches every
+session of a recipient user. It exercises simultaneous clicks and healing, lost
+requests/replies, claim timeouts and withdrawal, expired claims, late outcome
+reports, stale confirmations, ownership, visibility, failures, version 1
+records, main/splash conflicts and stale pending-window clicks.
 
-Transport tests cover recipient routing, in-flight retry deduplication, slow
-document writes on independent messages, local GM timeouts, disconnected sends,
-socket exceptions and timer cleanup. The simulated transport does not establish
-live network latency or multi-session coordinator safety.
+Coordinator tests run several sessions of one GM account and an assistant: the
+election, newcomers on slow links, tab closes, silent crashes, GM reloads, a
+frozen coordinator thawing with competing clicks in its backlog, sessions that
+missed updates while offline, forced split brain, clock skew and clock steps. Transport tests
+cover recipient routing, retry deduplication, slow writes on independent
+messages, local GM timeouts, disconnected sends, socket exceptions, protocol
+mismatches and timer cleanup. Each timing safeguard was checked by weakening it
+and confirming that a test fails.
 
 DOM tests use jsdom to exercise capture/target/bubble event order, verifying that
 native and Toolbelt listeners do not run when our interception handles a click.

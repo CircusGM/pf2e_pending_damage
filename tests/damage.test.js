@@ -75,10 +75,27 @@ test("adapter awaits the system's operation instead of finishing when a shield d
 });
 
 test("Shift dialog keeps positive healing adjustments intuitive and cancellation distinguishable", async () => {
-    let config;
-    foundry.applications.api.DialogV2.prompt = async options => { config = options; return options.ok.callback(null,
-        { form: { elements: { adjustment: { valueAsNumber: 4, checkValidity: () => true } } } }); };
+    let config, typed = 4;
+    // Like DialogV2: a callback result of null or undefined becomes the button's action.
+    foundry.applications.api.DialogV2.prompt = async options => { config = options; return (await options.ok.callback(null,
+        { form: { elements: { adjustment: { valueAsNumber: typed } } } })) ?? "ok"; };
     assert.equal(await promptAdjustment(-1), -4);
     assert.equal(config.rejectClose, false);
     assert.equal(await promptAdjustment(0.5), 4);
+    typed = NaN; // An empty field, as in PF2e's own dialog.
+    assert.equal(await promptAdjustment(1), 0);
+    typed = 2.7;
+    assert.equal(await promptAdjustment(1), 2);
+    foundry.applications.api.DialogV2.prompt = async () => null; // Closed without applying.
+    assert.equal(await promptAdjustment(1), null);
+    foundry.applications.api.DialogV2.prompt = async () => "ok";
+    assert.equal(await promptAdjustment(1), null);
+});
+
+test("errors before PF2e's actor update are marked as leaving HP untouched", async () => {
+    await assert.rejects(applyDamage({ message: msg, token: target, rollIndex: 9, multiplier: 1 }), error => error.untouched === true);
+    target.actor.getContextualClone = () => { throw new Error("system API changed"); };
+    await assert.rejects(applyDamage({ message: msg, token: target, rollIndex: 0, multiplier: 1 }), error => error.untouched === true);
+    target.actor.getContextualClone = () => ({ getSelfRollOptions: () => [], applyDamage: async () => { throw new Error("update failed"); } });
+    await assert.rejects(applyDamage({ message: msg, token: target, rollIndex: 0, multiplier: 1 }), error => !error.untouched);
 });
