@@ -15,7 +15,12 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 FOLDER = "/pf2e-pending-damage"
+REPOSITORY = "CircusGM/pf2e_pending_damage"
 HELPER = Path(os.environ.get("DROPBOX_HELPER", Path.home() / ".codex/skills/dropbox/scripts"))
+
+
+def numeric(version):
+    return tuple(int(part) for part in version.split("-")[0].split("."))
 
 
 def main():
@@ -25,6 +30,12 @@ def main():
     import upload_and_share as dropbox
 
     version = json.loads((ROOT / "package.json").read_text())["version"]
+    # Foundry only offers an update to a higher version, so stay ahead of GitHub releases.
+    with urllib.request.urlopen(f"https://api.github.com/repos/{REPOSITORY}/releases", timeout=30) as response:
+        released = [release["tag_name"].removeprefix("v") for release in json.loads(response.read())]
+    newest = max(released, key=numeric, default="0.0.0")
+    if numeric(version) <= numeric(newest):
+        sys.exit(f"version {version} must be higher than the GitHub release {newest}")
     manifest_path = f"{FOLDER}/module.json"
     zip_path = f"{FOLDER}/pf2e-pending-damage-{version}.zip"
     token = dropbox.load_token()
@@ -53,7 +64,7 @@ def main():
         subprocess.run([sys.executable, str(ROOT / "tools/package.py"), "--output-dir", str(out)],
                        check=True, stdout=subprocess.DEVNULL)
         manifest = json.loads((out / "module.json").read_text())
-        manifest.update(url="https://github.com/CircusGM/pf2e_pending_damage", manifest=manifest_url, download=zip_url)
+        manifest.update(url=f"https://github.com/{REPOSITORY}", manifest=manifest_url, download=zip_url)
         manifest_bytes = (json.dumps(manifest, indent=2) + "\n").encode()
         # The archive's manifest must match the published one.
         release = out / "release.zip"
