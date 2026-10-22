@@ -1,7 +1,8 @@
-"""Build a test release and upload it to Dropbox, replacing any upload of the same version.
+"""Upload a test build to Dropbox without publishing a GitHub release.
 
-The manifest keeps one Dropbox URL across versions, so Foundry can install and
-update from it. Credentials come from the local Dropbox helper
+The zip is the GitHub release build, so an installed copy keeps updating from
+GitHub releases; only the install manifest, whose URL stays the same across
+versions, points to Dropbox. Credentials come from the local Dropbox helper
 (DROPBOX_HELPER, default ~/.codex/skills/dropbox/scripts), never from this repository.
 """
 import json
@@ -61,18 +62,13 @@ def main():
 
     with tempfile.TemporaryDirectory() as directory:
         out = Path(directory)
-        subprocess.run([sys.executable, str(ROOT / "tools/package.py"), "--output-dir", str(out)],
-                       check=True, stdout=subprocess.DEVNULL)
+        subprocess.run([sys.executable, str(ROOT / "tools/package.py"), "--output-dir", str(out),
+                        "--repository", REPOSITORY, "--tag", version], check=True, stdout=subprocess.DEVNULL)
+        put(zip_path, (out / "module.zip").read_bytes())
+        # Only the install manifest points to Dropbox; the installed module updates from GitHub.
         manifest = json.loads((out / "module.json").read_text())
-        manifest.update(url=f"https://github.com/{REPOSITORY}", manifest=manifest_url, download=zip_url)
-        manifest_bytes = (json.dumps(manifest, indent=2) + "\n").encode()
-        # The archive's manifest must match the published one.
-        release = out / "release.zip"
-        with ZipFile(out / "module.zip") as source, ZipFile(release, "w", ZIP_DEFLATED) as target:
-            for item in source.infolist():
-                target.writestr(item, manifest_bytes if item.filename == "module.json" else source.read(item))
-        put(zip_path, release.read_bytes())
-    put(manifest_path, manifest_bytes)
+        manifest.update(manifest=manifest_url, download=zip_url)
+        put(manifest_path, (json.dumps(manifest, indent=2) + "\n").encode())
     print(json.dumps({"version": version, "manifest": manifest_url, "download": zip_url}, indent=2))
 
 

@@ -78,8 +78,9 @@ The build writes `dist/module.json` and `dist/module.zip`. Extract the zip into
 See [TESTING.md](TESTING.md) for validation commands and coverage.
 
 For a test build, bump `version` in `package.json` and run `npm run deploy:dropbox`.
-It uploads to `/pf2e-pending-damage/` in Dropbox with a manifest URL that stays the
-same across versions, using credentials from a local Dropbox helper outside the repository.
+It uploads the GitHub release build to `/pf2e-pending-damage/` in Dropbox with an
+install manifest URL that stays the same across versions; installed copies still
+update from GitHub releases. Credentials come from a local Dropbox helper outside the repository.
 
 Publishing a GitHub release tagged `vX.Y.Z` or `X.Y.Z` runs validation and attaches
 both assets with the release version and download URLs filled in.
